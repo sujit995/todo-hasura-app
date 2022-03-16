@@ -1,7 +1,7 @@
 export const todoSchema  = {
+    'version': 0,
     'title': 'todo schema',
     'description': 'todo schema',
-    'version': 0,
     'type': 'object',
     'properties': {
         'id': {

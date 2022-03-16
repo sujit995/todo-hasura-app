@@ -1,5 +1,5 @@
 import { createRxDatabase, addRxPlugin } from 'rxdb';
-import { getRxStoragePouch, addPouchPlugin } from 'rxdb/plugins/pouchdb';
+import { getRxStoragePouch, addPouchPlugin, checkAdapter } from 'rxdb/plugins/pouchdb';
 import { todoSchema } from './Schema';
 
 // import RxDBSchemaCheckModule from 'rxdb/plugins/schema-check';
@@ -21,22 +21,24 @@ export const createDb = async () => {
 
     const db = await createRxDatabase({
         name: 'tododb',
-        adapter: getRxStoragePouch('idb'),
+        storage: getRxStoragePouch('idb'),
     });
 
-    console.log('DatabaseService: created database');
-    window['db'] = db; // write to window for debugging
+    const ok = await checkAdapter('idb');
+    console.dir(ok);
 
-    await db.collection({
+    console.log('DatabaseService: created database')
+
+    await db.addCollections({
         name: 'todos',
         schema: todoSchema
      })
-
     return db;
 };
 
 
-const syncURL = 'https://faithful-vulture-70.hasura.app/v1/graphql';
+
+const syncURL = 'https://becoming-muskrat-71.hasura.app/v1/graphql';
 
 const batchSize = 5;
 const pullQueryBuilder = (userId) => {
@@ -152,7 +154,7 @@ export class GraphQLReplicator {
     }
    
     setupGraphQLSubscription(auth, replicationState) {
-        const endpointUrl = 'ws://faithful-vulture-70.hasura.app/v1/graphql';
+        const endpointUrl = 'wss:https://becoming-muskrat-71.hasura.app/v1/graphql';
         const wsClient = new createClient(endpointUrl, {
             reconnect: true,
             connectionParams: {
