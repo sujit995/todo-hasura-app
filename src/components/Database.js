@@ -1,27 +1,27 @@
-import RxDB from 'rxdb';
-
+import { createRxDatabase, addRxPlugin } from 'rxdb';
+import { getRxStoragePouch, addPouchPlugin } from 'rxdb/plugins/pouchdb';
 import { todoSchema } from './Schema';
 
-import RxDBSchemaCheckModule from 'rxdb/plugins/schema-check';
-import RxDBErrorMessagesModule from 'rxdb/plugins/error-messages';
-import RxDBValidateModule from 'rxdb/plugins/validate';
-import RxDBReplicationGraphQL from 'rxdb/plugins/replication-graphql';
+// import RxDBSchemaCheckModule from 'rxdb/plugins/schema-check';
+// import RxDBErrorMessagesModule from 'rxdb/plugins/error-messages';
+import { RxDBValidatePlugin } from 'rxdb/plugins/validate';
+import { RxDBReplicationGraphQLPlugin } from 'rxdb/plugins/replication-graphql';
 
-import { SubscriptionClient } from 'subscriptions-transport-ws';
+import { createClient } from 'graphql-ws';
 
-RxDB.plugin(RxDBSchemaCheckModule);
-RxDB.plugin(RxDBErrorMessagesModule);
-RxDB.plugin(RxDBValidateModule);
-RxDB.plugin(RxDBReplicationGraphQL);
+// addRxPlugin(RxDBSchemaCheckModule);
+// addRxPlugin(RxDBErrorMessagesModule);
+addRxPlugin(RxDBValidatePlugin);
+addRxPlugin(RxDBReplicationGraphQLPlugin);
 
-RxDB.plugin(require('pouchdb-adapter-idb'));
+addPouchPlugin(require('pouchdb-adapter-idb'));
 
 export const createDb = async () => {
     console.log('DatabaseService: creating database..');
 
-    const db = await RxDB.create({
+    const db = await createRxDatabase({
         name: 'tododb',
-        adapter: 'idb',
+        adapter: getRxStoragePouch('idb'),
     });
 
     console.log('DatabaseService: created database');
@@ -108,7 +108,7 @@ export class GraphQLReplicator {
     constructor(db) {
         this.db = db;
         this.replicationState = null;
-        this.subscriptionClient = null;      
+        this.createClient = null;      
     }
 
     async restart(auth) {
@@ -116,12 +116,12 @@ export class GraphQLReplicator {
             this.replicationState.cancel()
         }
 
-        if(this.subscriptionClient) {
-            this.subscriptionClient.close()
+        if(this.createClient) {
+            this.createClient.close()
         }
 
         this.replicationState = await this.setupGraphQLReplication(auth)
-        this.subscriptionClient = this.setupGraphQLSubscription(auth, this.replicationState)
+        this.createClient = this.setupGraphQLSubscription(auth, this.replicationState)
     }
 
     async setupGraphQLReplication(auth) {
@@ -152,8 +152,8 @@ export class GraphQLReplicator {
     }
    
     setupGraphQLSubscription(auth, replicationState) {
-        const endpointUrl = 'wss://faithful-vulture-70.hasura.app/v1/graphql';
-        const wsClient = new SubscriptionClient(endpointUrl, {
+        const endpointUrl = 'ws://faithful-vulture-70.hasura.app/v1/graphql';
+        const wsClient = new createClient(endpointUrl, {
             reconnect: true,
             connectionParams: {
                 headers: {
@@ -162,10 +162,10 @@ export class GraphQLReplicator {
             },
             timeout: 1000 * 60,
             onConnect: () => {
-                console.log('SubscriptionClient.onConnect()');
+                console.log('createClient.onConnect()');
             },
             connectionCallback: () => {
-                console.log('SubscriptionClient.connectionCallback:');
+                console.log('createClient.connectionCallback:');
             },
             reconnectionAttempts: 10000,
             inactivityTimeout: 10 * 1000,

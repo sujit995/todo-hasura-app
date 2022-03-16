@@ -9,14 +9,28 @@ class TodoListWrapper extends Component {
     todos: []
   }
 
+  rxSubs = []
+
+  async componentDidMount() {
+    const sub = this.props.db.todos.find()
+                .sort('createdAt').$.subscribe(todos => {
+        if (!todos) {
+            return;
+        }
+                
+        this.setState({todos});
+    });
+    this.rxSubs.push(sub);
+  }
+
   render() {
     return (
       <div className="todoWrapper">
         <div className="sectionHeader"> Todos </div>
 
-        <TodoInput auth={this.props.auth} />
+        <TodoInput auth={this.props.auth} db={this.props.db} />
 
-        <TodoList todos={this.state.todos} auth={this.props.auth} />
+        <TodoList todos={this.state.todos} db={this.props.db} auth={this.props.auth} />
       </div>
     );
   }
