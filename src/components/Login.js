@@ -5,7 +5,7 @@ const Login = ({loginHandler}) => (
 <div className="overlay">
   <div className="overlay-content">
     <div className="overlay-heading">
-      Welcome to RxDB Hasura tutorial app
+      Welcome to RxDB Hasura Todo app
     </div>
     <div className="overlay-message">
       Please login to continue

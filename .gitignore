@@ -21,3 +21,6 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+
+// const endpointURL = 'ws://becoming-muskrat-71.hasura.app/v1/graphql';

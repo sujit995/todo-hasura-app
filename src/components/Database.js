@@ -7,7 +7,8 @@ import { todoSchema } from './Schema';
 import { RxDBValidatePlugin } from 'rxdb/plugins/validate';
 import { RxDBReplicationGraphQLPlugin } from 'rxdb/plugins/replication-graphql';
 
-import { createClient } from 'graphql-ws';
+import { SubscriptionClient } from 'subscriptions-transport-ws';
+// import { createClient } from 'graphql-ws';
 
 // addRxPlugin(RxDBSchemaCheckModule);
 // addRxPlugin(RxDBErrorMessagesModule);
@@ -22,17 +23,26 @@ export const createDb = async () => {
     const db = await createRxDatabase({
         name: 'tododb',
         storage: getRxStoragePouch('idb'),
+        ignoreDuplicate: true
     });
 
     const ok = await checkAdapter('idb');
     console.dir(ok);
 
     console.log('DatabaseService: created database')
+    console.log(todoSchema)
 
     await db.addCollections({
-        name: 'todos',
-        schema: todoSchema
-     })
+        todos: {
+            schema: todoSchema,
+            migrationStrategies: {
+                1: (oldDoc) => {
+                    return oldDoc
+                }
+            }
+        }
+
+    })
     return db;
 };
 
@@ -110,28 +120,30 @@ export class GraphQLReplicator {
     constructor(db) {
         this.db = db;
         this.replicationState = null;
-        this.createClient = null;      
+        this.subscriptionClient = null;  
     }
 
     async restart(auth) {
         if(this.replicationState) {
             this.replicationState.cancel()
+            console.log(this.replicationState.cancel())
         }
 
-        if(this.createClient) {
-            this.createClient.close()
+        if(this.subscriptionClient) {
+            this.subscriptionClient.close()
+            console.log(this.replicationState.cancel())
         }
 
         this.replicationState = await this.setupGraphQLReplication(auth)
-        this.createClient = this.setupGraphQLSubscription(auth, this.replicationState)
+        this.subscriptionClient = this.setupGraphQLSubscription(auth, this.replicationState)
     }
 
     async setupGraphQLReplication(auth) {
         const replicationState = this.db.todos.syncGraphQL({
            url: syncURL,
-           headers: {
-               'Authorization': `Bearer ${auth.idToken}`
-           },
+        //    headers: {
+        //        'Authorization': `Bearer ${auth.idToken}`
+        //    },
            push: {
                batchSize,
                queryBuilder: pushQueryBuilder
@@ -140,8 +152,12 @@ export class GraphQLReplicator {
                queryBuilder: pullQueryBuilder(auth.userId)
            },
            live: true,
-          
-           liveInterval: 1000 * 60 * 10, 
+           /**
+            * Because the websocket is used to inform the client
+            * when something has changed,
+            * we can set the liveIntervall to a high value
+            */
+           liveInterval: 1000 * 60 * 10, // 10 minutes
            deletedFlag: 'deleted'
        });
    
@@ -154,24 +170,15 @@ export class GraphQLReplicator {
     }
    
     setupGraphQLSubscription(auth, replicationState) {
-        const endpointUrl = 'wss:https://becoming-muskrat-71.hasura.app/v1/graphql';
-        const wsClient = new createClient(endpointUrl, {
+        // Change this url to point to your hasura graphql url
+        const endpointURL = 'ws://becoming-muskrat-71.hasura.app/v1/graphql';
+        const wsClient = new SubscriptionClient(endpointURL, {
             reconnect: true,
             connectionParams: {
                 headers: {
                     'Authorization': `Bearer ${auth.idToken}`
                 }
             },
-            timeout: 1000 * 60,
-            onConnect: () => {
-                console.log('createClient.onConnect()');
-            },
-            connectionCallback: () => {
-                console.log('createClient.connectionCallback:');
-            },
-            reconnectionAttempts: 10000,
-            inactivityTimeout: 10 * 1000,
-            lazy: true
         });
     
         const query = `subscription onTodoChanged {

@@ -6,7 +6,7 @@ const Header = ({logoutHandler}) => (
   <Navbar fluid className="m-bottom-0">
     <Navbar.Header className="navHeader">
       <Navbar.Brand className="navBrand">
-        RxDB - Hasura Demo App
+        RxDB - Hasura Todo App
       </Navbar.Brand>
       <Nav pullRight>
         <NavItem>

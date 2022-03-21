@@ -133,7 +133,7 @@ export default class AppWrapper extends React.Component {
 
         this.graphqlReplicator = new Database.GraphQLReplicator(db);
 
-        // If this is a callback URL then do the right things
+
         const location = this.props.location;
         if (location && location.pathname.startsWith('/callback') && /access_token|id_token|error/.test(location.hash)) {
             this.handleAuthentication();
